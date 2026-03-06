@@ -1,8 +1,5 @@
-"""
-Investor status formatter — no external API required.
-Structures the most recent call transcript, note, and email into a
-readable summary for the advisor.
-"""
+import anthropic
+from config import settings
 
 
 async def generate_investor_status(
@@ -11,20 +8,37 @@ async def generate_investor_status(
     notes: list[str],
     emails: list[str],
 ) -> str:
-    if not transcripts and not notes and not emails:
-        return "No recent activity found for this investor (no calls, notes, or emails on record)."
-
     sections: list[str] = []
 
     if transcripts:
-        # Show up to 12 dialogue lines from the most recent transcript
-        lines = [line for line in transcripts[0].split("\n") if line.strip()][:12]
-        sections.append("── Most Recent Call ──\n" + "\n".join(lines))
-
+        sections.append("## Call Transcripts\n" + "\n\n---\n\n".join(transcripts))
     if notes:
-        sections.append("── Latest Note ──\n" + notes[0])
-
+        sections.append("## HubSpot Notes\n" + "\n\n".join(notes))
     if emails:
-        sections.append("── Latest Email ──\n" + emails[0])
+        sections.append("## Emails\n" + "\n\n".join(emails))
 
-    return "\n\n".join(sections)
+    if not sections:
+        return "No recent activity found for this investor (no calls, notes, or emails on record)."
+
+    combined = "\n\n".join(sections)
+
+    prompt = (
+        f"You are reviewing recent activity for {investor_name}, an investor at Masterworks "
+        f"(an art investment platform). Below are call transcripts, advisor notes, and emails "
+        f"logged in HubSpot.\n\n"
+        f"{combined}\n\n"
+        f"Write exactly 3 sentences:\n"
+        f"1. Their level of interest and which specific fund(s) or offering(s) they have shown interest in.\n"
+        f"2. A summary of recent touchpoints (calls, emails, notes) — when and what channel.\n"
+        f"3. What the investor asked for or expressed concern about, and what follow-up the advisor committed to.\n\n"
+        f"Be specific and factual. If information for a sentence is not available, say so briefly. "
+        f"Do not use bullet points or headers — output exactly 3 plain sentences."
+    )
+
+    client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+    message = client.messages.create(
+        model="claude-sonnet-4-5",
+        max_tokens=300,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return message.content[0].text.strip()
