@@ -45,12 +45,10 @@ a { color: inherit; text-decoration: none; }
 }
 
 .login-logo-img {
-  height: 44px;
-  width: auto;
-  margin-bottom: 24px;
+  width: 200px;
+  height: auto;
+  margin: 0 auto 28px;
   display: block;
-  margin-left: auto;
-  margin-right: auto;
 }
 
 .login-title {
@@ -128,8 +126,9 @@ a { color: inherit; text-decoration: none; }
 }
 
 .nav-logo {
-  height: 64px;
+  height: 40px;
   width: auto;
+  max-width: 300px;
   flex-shrink: 0;
 }
 

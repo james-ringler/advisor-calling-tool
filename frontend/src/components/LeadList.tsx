@@ -72,7 +72,7 @@ export default function LeadList({ advisor, onLogout }: Props) {
       <nav className="app-navbar">
         <div className="navbar-inner">
           <img
-            src="https://www.masterworks.com/mwlogo-400x100.png"
+            src="/masterworks-logo.svg"
             className="nav-logo"
             alt="Masterworks"
           />

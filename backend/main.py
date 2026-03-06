@@ -92,7 +92,7 @@ def _build_lead(contact: dict, rank: int) -> LeadResponse:
             contact_id=contact_id,
         ),
         last_call_date=_format_date(props.get("aircall_last_call_at")),
-        last_website_visit=_format_date(props.get("hs_analytics_last_visit_timestamp")),
+        last_website_visit=_format_date(props.get("last_seen_timestamp")),
     )
 
 

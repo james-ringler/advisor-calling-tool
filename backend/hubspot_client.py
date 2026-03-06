@@ -18,7 +18,7 @@ PROPERTIES = [
     "totalamountpurchased",
     "hs_linkedin_url",
     "aircall_last_call_at",
-    "hs_analytics_last_visit_timestamp",
+    "last_seen_timestamp",
 ]
 
 ADVISOR_NAMES = [
