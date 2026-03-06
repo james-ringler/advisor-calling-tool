@@ -43,12 +43,20 @@ HUBSPOT_CONTACT_URL = "https://app.hubspot.com/contacts/{account_id}/record/0-1/
 
 
 def _format_date(ms_value: Optional[str]) -> Optional[str]:
+    """Parse either a millisecond epoch string or an ISO 8601 datetime string."""
     if not ms_value:
         return None
+    # Try millisecond epoch first (e.g. "1635854840000")
     try:
         ts = int(ms_value) / 1000.0
         return datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
     except (TypeError, ValueError, OSError):
+        pass
+    # Fall back to ISO 8601 (e.g. "2025-11-02T14:07:20Z")
+    try:
+        dt = datetime.fromisoformat(ms_value.replace("Z", "+00:00"))
+        return dt.strftime("%Y-%m-%d")
+    except (TypeError, ValueError):
         return None
 
 

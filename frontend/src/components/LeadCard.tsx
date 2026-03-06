@@ -25,6 +25,16 @@ function scoreColor(score: number): string {
   return 'score-low'
 }
 
+// Maps HubSpot tier values like "Tier A", "Tier B: ...", "Tier C: 18 Months+" to a CSS class
+function tierClass(tier: string | null): string {
+  if (!tier) return ''
+  const match = tier.match(/tier\s+([a-zA-Z])/i)
+  if (!match) return ''
+  const letter = match[1].toUpperCase()
+  const map: Record<string, string> = { A: 'a', B: 'b', C: 'c', D: 'd' }
+  return `tier-${map[letter] ?? 'other'}`
+}
+
 export default function LeadCard({ lead, advisor, onDiscard }: Props) {
   const [showModal, setShowModal] = useState(false)
   const [discarding, setDiscarding] = useState(false)
@@ -98,7 +108,7 @@ export default function LeadCard({ lead, advisor, onDiscard }: Props) {
           </div>
           <div className="lead-field">
             <span className="field-label">Investor Tier</span>
-            <span className={`field-value tier-badge tier-${(lead.investor_tier ?? '').toLowerCase()}`}>
+            <span className={`field-value tier-badge ${tierClass(lead.investor_tier)}`}>
               {lead.investor_tier ?? '—'}
             </span>
           </div>

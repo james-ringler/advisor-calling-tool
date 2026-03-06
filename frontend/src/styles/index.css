@@ -260,12 +260,13 @@ a { color: inherit; text-decoration: none; }
 .field-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #9CA3AF; }
 .field-value { font-size: 14px; color: #111827; }
 
-/* Tier badges */
-.tier-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 13px; font-weight: 600; }
-.tier-platinum { background: rgba(139, 92, 246, 0.12); color: #7C3AED; }
-.tier-gold     { background: rgba(245, 158, 11, 0.12); color: #D97706; }
-.tier-silver   { background: rgba(107, 114, 128, 0.12); color: #4B5563; }
-.tier-bronze   { background: rgba(180, 83, 9, 0.12); color: #92400E; }
+/* Tier badges — HubSpot values: "Tier A", "Tier B: ...", "Tier C: 18 Months+", etc. */
+.tier-badge  { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 13px; font-weight: 600; }
+.tier-a      { background: rgba(139, 92, 246, 0.12); color: #7C3AED; }
+.tier-b      { background: rgba(245, 158, 11, 0.12); color: #D97706; }
+.tier-c      { background: rgba(107, 114, 128, 0.12); color: #4B5563; }
+.tier-d      { background: rgba(180, 83, 9, 0.12);   color: #92400E; }
+.tier-other  { background: rgba(107, 114, 128, 0.08); color: #6B7280; }
 
 /* ───── Meeting Countdown ───── */
 .meeting-countdown {
