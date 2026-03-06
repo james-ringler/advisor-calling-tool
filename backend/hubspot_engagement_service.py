@@ -1,5 +1,7 @@
 """Fetch HubSpot engagements (notes, emails) for a contact."""
 
+import html
+import re
 import httpx
 from typing import Any
 from config import settings
@@ -17,6 +19,18 @@ def _headers() -> dict[str, str]:
 def _date(timestamp: str) -> str:
     """Return YYYY-MM-DD from an ISO timestamp string."""
     return timestamp[:10] if timestamp else ""
+
+
+def _strip_html(text: str) -> str:
+    """Remove HTML tags and decode entities from HubSpot rich-text fields."""
+    text = html.unescape(text)
+    # Replace block-level tags with newlines so paragraphs stay readable
+    text = re.sub(r'<(br|p|div|li)[^>]*>', '\n', text, flags=re.IGNORECASE)
+    # Strip all remaining tags
+    text = re.sub(r'<[^>]+>', '', text)
+    # Collapse runs of whitespace / blank lines
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
 
 
 async def get_contact_notes(contact_id: str, limit: int = 5) -> list[str]:
@@ -43,7 +57,7 @@ async def get_contact_notes(contact_id: str, limit: int = 5) -> list[str]:
         results: list[str] = []
         for note in response.json().get("results", []):
             props = note.get("properties", {})
-            body_text = (props.get("hs_note_body") or "").strip()
+            body_text = _strip_html(props.get("hs_note_body") or "")
             date = _date(props.get("hs_timestamp", ""))
             if body_text:
                 results.append(f"[Note {date}]: {body_text[:800]}")
