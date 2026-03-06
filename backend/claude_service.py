@@ -1,4 +1,4 @@
-import anthropic
+from groq import AsyncGroq
 from config import settings
 
 
@@ -35,10 +35,10 @@ async def generate_investor_status(
         f"Do not use bullet points or headers — output exactly 3 plain sentences."
     )
 
-    client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-    message = client.messages.create(
-        model="claude-sonnet-4-5",
+    client = AsyncGroq(api_key=settings.GROQ_API_KEY)
+    completion = await client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
         max_tokens=300,
         messages=[{"role": "user", "content": prompt}],
     )
-    return message.content[0].text.strip()
+    return completion.choices[0].message.content.strip()

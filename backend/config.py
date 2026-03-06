@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     HUBSPOT_ACCOUNT_ID: str = "5454671"
     AIRCALL_API_ID: str
     AIRCALL_API_TOKEN: str
-    ANTHROPIC_API_KEY: str
+    GROQ_API_KEY: str
     DATABASE_URL: str  # postgresql://user:pass@host:5432/dbname (set by Railway automatically)
 
     # Google Calendar OAuth — set in Railway dashboard when enabling calendar feature
