@@ -62,6 +62,18 @@ def _format_date(ms_value: Optional[str]) -> Optional[str]:
         return None
 
 
+def _has_scheduled_followup(contact: dict) -> bool:
+    """Return True if a future HubSpot activity is already scheduled for this contact."""
+    next_date = contact.get("properties", {}).get("notes_next_activity_date")
+    if not next_date:
+        return False
+    try:
+        dt = datetime.fromisoformat(next_date.replace("Z", "+00:00"))
+        return dt > datetime.now(timezone.utc)
+    except (TypeError, ValueError):
+        return False
+
+
 def _build_lead(contact: dict, rank: int) -> LeadResponse:
     props = contact.get("properties", {})
     contact_id = contact["id"]
@@ -136,9 +148,10 @@ async def leads(request: Request, advisor: str = Query(..., description="Advisor
     contacts = await fetch_contacts_for_advisor(advisor)
     discarded = await get_active_discards(pool, advisor)
     contacts = [c for c in contacts if c["id"] not in discarded]
+    contacts = [c for c in contacts if not _has_scheduled_followup(c)]
 
     ranked = rank_contacts(contacts)
-    return [_build_lead(c, c["rank"]) for c in ranked]
+    return [_build_lead(c, c["rank"]) for c in ranked[:35]]
 
 
 @app.post("/api/discard")
