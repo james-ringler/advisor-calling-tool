@@ -91,7 +91,7 @@ def _build_lead(contact: dict, rank: int) -> LeadResponse:
             account_id=settings.HUBSPOT_ACCOUNT_ID,
             contact_id=contact_id,
         ),
-        last_call_date=_format_date(props.get("hs_last_call_date")),
+        last_call_date=_format_date(props.get("aircall_last_call_at")),
         last_website_visit=_format_date(props.get("hs_analytics_last_visit_timestamp")),
     )
 

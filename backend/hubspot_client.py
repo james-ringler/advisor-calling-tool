@@ -17,7 +17,7 @@ PROPERTIES = [
     "mmfc_outcome",
     "totalamountpurchased",
     "hs_linkedin_url",
-    "hs_last_call_date",
+    "aircall_last_call_at",
     "hs_analytics_last_visit_timestamp",
 ]
 
