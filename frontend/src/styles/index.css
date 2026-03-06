@@ -30,19 +30,13 @@ a { color: inherit; text-decoration: none; }
   text-align: center;
 }
 
-.login-logo {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 64px;
-  height: 64px;
-  background: #495DE5;
-  border-radius: 14px;
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: -1px;
-  margin-bottom: 20px;
-  color: #fff;
+.login-logo-img {
+  height: 44px;
+  width: auto;
+  margin-bottom: 24px;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .login-title {
@@ -117,17 +111,9 @@ a { color: inherit; text-decoration: none; }
 
 .header-left { display: flex; align-items: center; gap: 14px; }
 
-.header-logo {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 42px;
-  height: 42px;
-  background: #495DE5;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 800;
-  color: #fff;
+.header-logo-img {
+  height: 28px;
+  width: auto;
   flex-shrink: 0;
 }
 

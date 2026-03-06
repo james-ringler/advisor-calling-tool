@@ -61,7 +61,7 @@ export default function LeadList({ advisor, onLogout }: Props) {
     <div className="app-container">
       <header className="app-header">
         <div className="header-left">
-          <span className="header-logo">MW</span>
+          <img src="https://www.masterworks.com/mwlogo-400x100.png" className="header-logo-img" alt="Masterworks" />
           <div>
             <h1 className="header-title">Calling List</h1>
             <p className="header-advisor">{advisor}</p>

@@ -26,7 +26,7 @@ export default function LoginScreen({ onLogin }: Props) {
   return (
     <div className="login-container">
       <div className="login-card">
-        <div className="login-logo">MW</div>
+        <img src="https://www.masterworks.com/mwlogo-400x100.png" className="login-logo-img" alt="Masterworks" />
         <h1 className="login-title">Advisor Calling Tool</h1>
         <p className="login-subtitle">Select your name to see your call list</p>
 
