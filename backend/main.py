@@ -1,3 +1,4 @@
+import asyncio
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone, timedelta
@@ -12,6 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from config import settings
 from database import init_db, upsert_discard, get_active_discards, save_google_token, get_google_token
 from hubspot_client import fetch_contacts_for_advisor, get_advisor_names
+from hubspot_engagement_service import get_contact_notes, get_contact_emails
 from ranking import rank_contacts
 from aircall_service import get_investor_transcripts
 from claude_service import generate_investor_status
@@ -166,8 +168,14 @@ async def investor_status(
     name: str = Query(...),
 ):
     try:
-        transcripts = await get_investor_transcripts(name)
-        status = await generate_investor_status(name, transcripts)
+        # Fetch all three data sources in parallel
+        transcripts, notes, emails = await asyncio.gather(
+            get_investor_transcripts(name),
+            get_contact_notes(contact_id),
+            get_contact_emails(contact_id),
+            return_exceptions=False,
+        )
+        status = await generate_investor_status(name, transcripts, notes, emails)
     except Exception as e:
         status = f"Unable to generate status: {str(e)}"
 
