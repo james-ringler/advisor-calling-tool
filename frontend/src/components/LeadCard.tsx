@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Lead, DiscardDuration } from '../types'
 import DiscardModal from './DiscardModal'
 import InvestorStatus from './InvestorStatus'
+import MeetingCountdown from './MeetingCountdown'
 import { discardContact } from '../api'
 
 interface Props {
@@ -113,7 +114,17 @@ export default function LeadCard({ lead, advisor, onDiscard }: Props) {
             <span className="field-label">Existing Adviser Status</span>
             <span className="field-value">{lead.existing_adviser_status ?? '—'}</span>
           </div>
+          <div className="lead-field">
+            <span className="field-label">Last Called</span>
+            <span className="field-value">{lead.last_call_date ?? 'Never'}</span>
+          </div>
+          <div className="lead-field">
+            <span className="field-label">Last on Website</span>
+            <span className="field-value">{lead.last_website_visit ?? 'Never'}</span>
+          </div>
         </div>
+
+        {lead.email && <MeetingCountdown contactEmail={lead.email} advisor={advisor} />}
 
         <InvestorStatus contactId={lead.id} investorName={lead.full_name} />
       </div>

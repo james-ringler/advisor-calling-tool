@@ -15,6 +15,13 @@ export interface Lead {
   total_amount_purchased: number | null
   total_investment_portfolio: number | null
   hubspot_url: string
+  last_call_date: string | null
+  last_website_visit: string | null
 }
 
 export type DiscardDuration = 'today' | '30days' | 'forever'
+
+export interface NextMeeting {
+  start: string   // ISO datetime string
+  summary: string
+}

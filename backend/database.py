@@ -9,7 +9,7 @@ import asyncpg
 
 
 async def init_db(pool: asyncpg.Pool) -> None:
-    """Create the discards table if it doesn't exist."""
+    """Create all tables if they don't exist."""
     await pool.execute("""
         CREATE TABLE IF NOT EXISTS discards (
             id SERIAL PRIMARY KEY,
@@ -18,6 +18,15 @@ async def init_db(pool: asyncpg.Pool) -> None:
             discard_until TIMESTAMPTZ,
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
             UNIQUE(advisor_name, contact_id)
+        )
+    """)
+    await pool.execute("""
+        CREATE TABLE IF NOT EXISTS google_tokens (
+            advisor_name TEXT PRIMARY KEY,
+            access_token TEXT NOT NULL,
+            refresh_token TEXT NOT NULL,
+            token_expiry TIMESTAMPTZ NOT NULL,
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
     """)
 
@@ -48,3 +57,38 @@ async def get_active_discards(pool: asyncpg.Pool, advisor_name: str) -> set[str]
           AND (discard_until IS NULL OR discard_until > $2)
     """, advisor_name, now)
     return {row["contact_id"] for row in rows}
+
+
+async def save_google_token(
+    pool: asyncpg.Pool,
+    advisor_name: str,
+    access_token: str,
+    refresh_token: str,
+    token_expiry: datetime,
+) -> None:
+    """Insert or update Google OAuth tokens for an advisor."""
+    await pool.execute("""
+        INSERT INTO google_tokens (advisor_name, access_token, refresh_token, token_expiry, updated_at)
+        VALUES ($1, $2, $3, $4, NOW())
+        ON CONFLICT (advisor_name)
+        DO UPDATE SET
+            access_token = EXCLUDED.access_token,
+            refresh_token = EXCLUDED.refresh_token,
+            token_expiry = EXCLUDED.token_expiry,
+            updated_at = NOW()
+    """, advisor_name, access_token, refresh_token, token_expiry)
+
+
+async def get_google_token(pool: asyncpg.Pool, advisor_name: str) -> Optional[dict]:
+    """Return stored Google tokens for an advisor, or None if not connected."""
+    row = await pool.fetchrow("""
+        SELECT access_token, refresh_token, token_expiry
+        FROM google_tokens WHERE advisor_name = $1
+    """, advisor_name)
+    if not row:
+        return None
+    return {
+        "access_token": row["access_token"],
+        "refresh_token": row["refresh_token"],
+        "token_expiry": row["token_expiry"],
+    }

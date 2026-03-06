@@ -25,6 +25,8 @@ class LeadResponse(BaseModel):
     total_amount_purchased: Optional[float] = None
     total_investment_portfolio: Optional[float] = None
     hubspot_url: str
+    last_call_date: Optional[str] = None
+    last_website_visit: Optional[str] = None
 
 
 class AdvisorsResponse(BaseModel):

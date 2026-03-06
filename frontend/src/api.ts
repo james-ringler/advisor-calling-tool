@@ -1,4 +1,4 @@
-import type { Lead, DiscardDuration } from './types'
+import type { Lead, DiscardDuration, NextMeeting } from './types'
 
 const BASE = '/api'
 
@@ -38,4 +38,15 @@ export async function fetchInvestorStatus(
   if (!res.ok) throw new Error('Failed to fetch investor status')
   const data = await res.json()
   return data.status as string
+}
+
+export async function fetchNextMeeting(
+  advisor: string,
+  contactEmail: string,
+): Promise<{ connected: boolean; meeting: NextMeeting | null }> {
+  const res = await fetch(
+    `${BASE}/calendar/next-meeting?advisor=${encodeURIComponent(advisor)}&contact_email=${encodeURIComponent(contactEmail)}`,
+  )
+  if (!res.ok) throw new Error('Calendar API error')
+  return res.json()
 }

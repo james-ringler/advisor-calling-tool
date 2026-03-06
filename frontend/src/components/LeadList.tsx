@@ -8,11 +8,29 @@ interface Props {
   onLogout: () => void
 }
 
+function calendarKey(advisor: string) {
+  return `google_connected_${advisor}`
+}
+
 export default function LeadList({ advisor, onLogout }: Props) {
   const [leads, setLeads] = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [refreshing, setRefreshing] = useState(false)
+  const [calendarConnected, setCalendarConnected] = useState(
+    () => localStorage.getItem(calendarKey(advisor)) === 'true'
+  )
+
+  // On mount: check if returning from Google OAuth callback
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('calendar') === 'connected') {
+      localStorage.setItem(calendarKey(advisor), 'true')
+      setCalendarConnected(true)
+      // Clean the URL without reloading
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  }, [advisor])
 
   const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true)
@@ -35,6 +53,10 @@ export default function LeadList({ advisor, onLogout }: Props) {
     setLeads((prev) => prev.filter((l) => l.id !== id))
   }
 
+  function handleConnectCalendar() {
+    window.location.href = `/api/auth/google?advisor=${encodeURIComponent(advisor)}`
+  }
+
   return (
     <div className="app-container">
       <header className="app-header">
@@ -48,6 +70,13 @@ export default function LeadList({ advisor, onLogout }: Props) {
         <div className="header-right">
           {!loading && (
             <span className="lead-count">{leads.length} lead{leads.length !== 1 ? 's' : ''}</span>
+          )}
+          {calendarConnected ? (
+            <span className="btn btn-calendar-connected">📅 Calendar Connected</span>
+          ) : (
+            <button className="btn btn-calendar" onClick={handleConnectCalendar}>
+              Connect Calendar
+            </button>
           )}
           <button
             className="btn btn-refresh"

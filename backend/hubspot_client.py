@@ -17,6 +17,8 @@ PROPERTIES = [
     "mmfc_outcome",
     "totalamountpurchased",
     "hs_linkedin_url",
+    "hs_last_call_date",
+    "hs_analytics_last_visit_timestamp",
 ]
 
 ADVISOR_NAMES = [

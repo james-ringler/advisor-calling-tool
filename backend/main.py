@@ -6,14 +6,16 @@ from typing import Optional
 import asyncpg
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from config import settings
-from database import init_db, upsert_discard, get_active_discards
+from database import init_db, upsert_discard, get_active_discards, save_google_token, get_google_token
 from hubspot_client import fetch_contacts_for_advisor, get_advisor_names
 from ranking import rank_contacts
 from aircall_service import get_investor_transcripts
 from claude_service import generate_investor_status
+from google_calendar_service import get_next_meeting
 from models import DiscardRequest, LeadResponse, AdvisorsResponse, InvestorStatusResponse
 
 
@@ -79,6 +81,26 @@ def _build_lead(contact: dict, rank: int) -> LeadResponse:
             account_id=settings.HUBSPOT_ACCOUNT_ID,
             contact_id=contact_id,
         ),
+        last_call_date=_format_date(props.get("hs_last_call_date")),
+        last_website_visit=_format_date(props.get("hs_analytics_last_visit_timestamp")),
+    )
+
+
+def _create_google_flow():
+    """Build a google_auth_oauthlib Flow from settings."""
+    from google_auth_oauthlib.flow import Flow
+    return Flow.from_client_config(
+        {
+            "web": {
+                "client_id": settings.GOOGLE_CLIENT_ID,
+                "client_secret": settings.GOOGLE_CLIENT_SECRET,
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "redirect_uris": [settings.GOOGLE_REDIRECT_URI],
+            }
+        },
+        scopes=["https://www.googleapis.com/auth/calendar.readonly"],
+        redirect_uri=settings.GOOGLE_REDIRECT_URI,
     )
 
 
@@ -142,6 +164,111 @@ async def investor_status(
         status = f"Unable to generate status: {str(e)}"
 
     return InvestorStatusResponse(contact_id=contact_id, status=status)
+
+
+# ─── Google Calendar OAuth ─────────────────────────────────────────────────────
+
+@app.get("/api/auth/google")
+async def google_auth(advisor: str = Query(..., description="Advisor name")):
+    """Redirect advisor to Google OAuth consent screen."""
+    if not settings.GOOGLE_CLIENT_ID:
+        raise HTTPException(status_code=503, detail="Google Calendar not configured")
+    flow = _create_google_flow()
+    auth_url, _ = flow.authorization_url(
+        access_type="offline",
+        prompt="consent",
+        state=advisor,
+    )
+    return RedirectResponse(auth_url)
+
+
+@app.get("/api/auth/google/callback")
+async def google_callback(
+    request: Request,
+    code: str = Query(...),
+    state: str = Query(...),
+):
+    """Exchange Google auth code for tokens and store them."""
+    advisor_name = state
+    valid = get_advisor_names()
+    if advisor_name not in valid:
+        raise HTTPException(status_code=400, detail="Invalid advisor in OAuth state")
+
+    flow = _create_google_flow()
+    flow.fetch_token(code=code)
+    creds = flow.credentials
+
+    # Ensure expiry is timezone-aware
+    expiry = creds.expiry  # naive UTC from Google
+    if expiry:
+        if expiry.tzinfo is None:
+            expiry = expiry.replace(tzinfo=timezone.utc)
+    else:
+        expiry = datetime.now(timezone.utc) + timedelta(hours=1)
+
+    pool = request.app.state.db
+    await save_google_token(
+        pool,
+        advisor_name,
+        creds.token,
+        creds.refresh_token or "",
+        expiry,
+    )
+
+    return RedirectResponse("/?calendar=connected")
+
+
+@app.get("/api/calendar/next-meeting")
+async def calendar_next_meeting(
+    request: Request,
+    advisor: str = Query(...),
+    contact_email: str = Query(...),
+):
+    """Return the next upcoming calendar event matching a contact's email."""
+    pool = request.app.state.db
+    token_data = await get_google_token(pool, advisor)
+
+    if not token_data:
+        return {"connected": False, "meeting": None}
+
+    try:
+        result = await get_next_meeting(
+            token_data["access_token"],
+            token_data["refresh_token"],
+            token_data["token_expiry"],
+            contact_email,
+        )
+    except Exception:
+        # Token may have been revoked or expired beyond refresh — treat as not connected
+        return {"connected": False, "meeting": None}
+
+    if result is None:
+        return {"connected": True, "meeting": None}
+
+    # Persist refreshed token if Google rotated it
+    if result.get("new_access_token"):
+        expiry_str = result.get("new_expiry")
+        if expiry_str:
+            new_expiry = datetime.fromisoformat(expiry_str)
+            if new_expiry.tzinfo is None:
+                new_expiry = new_expiry.replace(tzinfo=timezone.utc)
+        else:
+            new_expiry = datetime.now(timezone.utc) + timedelta(hours=1)
+        await save_google_token(
+            pool,
+            advisor,
+            result["new_access_token"],
+            token_data["refresh_token"],
+            new_expiry,
+        )
+
+    return {
+        "connected": True,
+        "meeting": {
+            "start": result["start"],
+            "summary": result["summary"],
+        },
+    }
 
 
 # ─── Serve React SPA (must come LAST — catches all unmatched routes) ──────────
