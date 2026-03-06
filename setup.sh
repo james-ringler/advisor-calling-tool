@@ -9,9 +9,11 @@ if [ ! -f .env ]; then
   echo ""
   echo "⚠️  Created .env from .env.example"
   echo "    Fill in your API keys before starting:"
-  echo "   HUBSPOT_TOKEN - HUBSPOT_TOKEN"
-  echo "   AIRCALL_API_TOKEN": "ff604341f6df5dcb0162cf812ed963a4 - AIRCALL_API_ID / AIRCALL_API_TOKEN"
-  echo "    - ANTHROPIC_API_KEY"
+  echo "    - HUBSPOT_TOKEN      → HubSpot private app token"
+  echo "    - AIRCALL_API_ID     → Aircall API ID"
+  echo "    - AIRCALL_API_TOKEN  → Aircall API token"
+  echo "    - ANTHROPIC_API_KEY  → Anthropic API key"
+  echo "    - DATABASE_URL       → Set automatically by Railway"
   echo ""
 fi
 
@@ -21,8 +23,8 @@ cd backend
 python3 -m venv venv
 source venv/bin/activate
 pip install --quiet --upgrade pip
-pip install --quiet "fastapi==0.111.0" "uvicorn==0.29.0" "httpx==0.27.0" \
-  "python-dotenv==1.0.1" "pydantic>=2.7,<3" "pydantic-settings>=2.3,<3" "anthropic>=0.28"
+pip install --quiet "fastapi==0.111.0" "uvicorn[standard]==0.29.0" "httpx==0.27.0" \
+  "python-dotenv==1.0.1" "pydantic>=2.7,<3" "pydantic-settings>=2.3,<3" "anthropic>=0.28" "asyncpg>=0.29"
 echo "✓ Backend ready"
 cd ..
 
