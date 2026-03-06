@@ -136,7 +136,7 @@ a { color: inherit; text-decoration: none; }
 
 /* ───── Hero ───── */
 .app-hero {
-  padding: 40px 0 32px;
+  padding: 40px 0 16px;
 }
 
 .hero-inner {
@@ -165,7 +165,7 @@ a { color: inherit; text-decoration: none; }
 .app-container {
   max-width: 960px;
   margin: 0 auto;
-  padding: 28px 20px 60px;
+  padding: 16px 20px 60px;
 }
 
 /* ───── Buttons ───── */
