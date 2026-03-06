@@ -128,7 +128,7 @@ a { color: inherit; text-decoration: none; }
 }
 
 .nav-logo {
-  height: 22px;
+  height: 32px;
   width: auto;
   flex-shrink: 0;
 }
@@ -137,8 +137,6 @@ a { color: inherit; text-decoration: none; }
 
 /* ───── Hero ───── */
 .app-hero {
-  background: #FFFFFF;
-  border-bottom: 1px solid #E1E1E1;
   padding: 40px 0 32px;
 }
 
