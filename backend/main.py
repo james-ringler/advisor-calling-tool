@@ -81,13 +81,19 @@ def _had_4min_call(contact: dict) -> bool:
     return False
 
 
+_CLOSED_ADVISER_ONLY = {"not interested to invest more", "no show"}
+
+
 def _is_closed(contact: dict) -> bool:
-    """Return True if the contact has already been closed (Order Completed)."""
+    """Return True if the contact has already been closed or disengaged."""
     props = contact.get("properties", {})
     for field in ("mmfc_outcome", "existing_adviser_status"):
-        val = props.get(field) or ""
-        if "order completed" in val.lower():
+        val = (props.get(field) or "").lower().strip()
+        if "order completed" in val:
             return True
+    adviser = (props.get("existing_adviser_status") or "").lower().strip()
+    if adviser in _CLOSED_ADVISER_ONLY:
+        return True
     return False
 
 
