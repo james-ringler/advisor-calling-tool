@@ -65,16 +65,18 @@ def _format_date(ms_value: Optional[str]) -> Optional[str]:
 def _has_qualifying_call(contact: dict, qualified_phones: Optional[set]) -> bool:
     """Return True if contact had a 4+ min Aircall conversation with the advisor.
 
-    Falls back to aircall_last_call_at presence when Aircall lookup failed (None).
+    Phone matching is best-effort. Falls back to aircall_last_call_at when:
+    - Aircall API is unreachable (qualified_phones is None)
+    - Contact has no phone or phone doesn't match (format mismatch)
     """
     props = contact.get("properties", {})
-    if qualified_phones is None:
-        # Aircall API unreachable — degrade gracefully: require any Aircall call
-        return bool(props.get("aircall_last_call_at"))
-    phone = (props.get("phone") or "").strip()
-    if not phone:
-        return False
-    return norm_phone(phone) in qualified_phones
+    # Try precise phone-based match for 4+ min call
+    if qualified_phones is not None:
+        phone = (props.get("phone") or "").strip()
+        if phone and norm_phone(phone) in qualified_phones:
+            return True
+    # Fallback: any Aircall call logged in HubSpot counts
+    return bool(props.get("aircall_last_call_at"))
 
 
 def _is_closed(contact: dict) -> bool:
