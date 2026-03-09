@@ -15,7 +15,7 @@ from database import init_db, upsert_discard, get_active_discards, save_google_t
 from hubspot_client import fetch_contacts_for_advisor, get_advisor_names
 from hubspot_engagement_service import get_contact_notes, get_contact_emails
 from ranking import rank_contacts
-from aircall_service import get_investor_transcripts, get_qualified_contact_phones, norm_phone
+from aircall_service import get_investor_transcripts
 from claude_service import generate_investor_status
 from google_calendar_service import get_next_meeting
 from models import DiscardRequest, LeadResponse, AdvisorsResponse, InvestorStatusResponse
@@ -62,21 +62,23 @@ def _format_date(ms_value: Optional[str]) -> Optional[str]:
         return None
 
 
-def _has_qualifying_call(contact: dict, qualified_phones: Optional[set]) -> bool:
-    """Return True if contact had a 4+ min Aircall conversation with the advisor.
+def _had_4min_call(contact: dict) -> bool:
+    """Return True if HubSpot records a 4+ minute Aircall conversation for this contact.
 
-    Phone matching is best-effort. Falls back to aircall_last_call_at when:
-    - Aircall API is unreachable (qualified_phones is None)
-    - Contact has no phone or phone doesn't match (format mismatch)
+    Uses two HubSpot properties synced by the Aircall integration:
+    - had_call_over_4_minutes: "Yes" if any historical call exceeded 4 min
+    - aircall_call_duration: last call duration in milliseconds (>= 240000 = 4 min)
     """
     props = contact.get("properties", {})
-    # Try precise phone-based match for 4+ min call
-    if qualified_phones is not None:
-        phone = (props.get("phone") or "").strip()
-        if phone and norm_phone(phone) in qualified_phones:
-            return True
-    # Fallback: any Aircall call logged in HubSpot counts
-    return bool(props.get("aircall_last_call_at"))
+    if (props.get("had_call_over_4_minutes") or "").strip().lower() == "yes":
+        return True
+    duration_raw = props.get("aircall_call_duration")
+    if duration_raw:
+        try:
+            return int(duration_raw) >= 240_000
+        except (ValueError, TypeError):
+            pass
+    return False
 
 
 def _is_closed(contact: dict) -> bool:
@@ -172,15 +174,12 @@ async def leads(request: Request, advisor: str = Query(..., description="Advisor
         raise HTTPException(status_code=400, detail=f"Unknown advisor: {advisor}")
 
     pool = request.app.state.db
-    contacts, qualified_phones = await asyncio.gather(
-        fetch_contacts_for_advisor(advisor),
-        get_qualified_contact_phones(advisor),
-    )
+    contacts = await fetch_contacts_for_advisor(advisor)
     discarded = await get_active_discards(pool, advisor)
     contacts = [c for c in contacts if c["id"] not in discarded]
     contacts = [c for c in contacts if not _is_closed(c)]
     contacts = [c for c in contacts if not _has_scheduled_followup(c)]
-    contacts = [c for c in contacts if _has_qualifying_call(c, qualified_phones)]
+    contacts = [c for c in contacts if _had_4min_call(c)]
 
     ranked = rank_contacts(contacts)
     return [_build_lead(c, c["rank"]) for c in ranked[:35]]

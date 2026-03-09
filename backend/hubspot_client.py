@@ -19,6 +19,8 @@ PROPERTIES = [
     "totalamountpurchased",
     "hs_linkedin_url",
     "aircall_last_call_at",
+    "aircall_call_duration",
+    "had_call_over_4_minutes",
     "last_seen_timestamp",
     "notes_next_activity_date",
 ]
