@@ -29,6 +29,18 @@ async def init_db(pool: asyncpg.Pool) -> None:
             updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
     """)
+    await pool.execute("""
+        CREATE TABLE IF NOT EXISTS analytics_events (
+            id           SERIAL PRIMARY KEY,
+            advisor_name TEXT NOT NULL,
+            event_type   TEXT NOT NULL,
+            created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+    """)
+    await pool.execute("""
+        CREATE INDEX IF NOT EXISTS idx_analytics_advisor_date
+            ON analytics_events (advisor_name, created_at DESC)
+    """)
 
 
 async def upsert_discard(
@@ -77,6 +89,30 @@ async def save_google_token(
             token_expiry = EXCLUDED.token_expiry,
             updated_at = NOW()
     """, advisor_name, access_token, refresh_token, token_expiry)
+
+
+async def log_event(pool: asyncpg.Pool, advisor_name: str, event_type: str) -> None:
+    """Insert a single analytics event row."""
+    await pool.execute(
+        "INSERT INTO analytics_events (advisor_name, event_type) VALUES ($1, $2)",
+        advisor_name, event_type,
+    )
+
+
+async def get_report(pool: asyncpg.Pool, days: int = 7):
+    """Return daily usage counts per advisor for the last N days (ET timezone)."""
+    return await pool.fetch("""
+        SELECT
+            (created_at AT TIME ZONE 'America/New_York')::date AS day,
+            advisor_name,
+            SUM(CASE WHEN event_type = 'page_load'  THEN 1 ELSE 0 END) AS page_loads,
+            SUM(CASE WHEN event_type = 'refresh'    THEN 1 ELSE 0 END) AS refreshes,
+            SUM(CASE WHEN event_type LIKE 'click_%' THEN 1 ELSE 0 END) AS clicks
+        FROM analytics_events
+        WHERE created_at >= NOW() - ($1 || ' days')::interval
+        GROUP BY day, advisor_name
+        ORDER BY day DESC, advisor_name
+    """, str(days))
 
 
 async def get_google_token(pool: asyncpg.Pool, advisor_name: str) -> Optional[dict]:

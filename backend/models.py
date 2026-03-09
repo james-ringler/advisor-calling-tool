@@ -29,6 +29,11 @@ class LeadResponse(BaseModel):
     last_website_visit: Optional[str] = None
 
 
+class AnalyticsEvent(BaseModel):
+    advisor_name: str
+    event_type: str
+
+
 class AdvisorsResponse(BaseModel):
     advisors: list[str]
 

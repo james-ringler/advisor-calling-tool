@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { Lead } from '../types'
-import { fetchLeads } from '../api'
+import { fetchLeads, trackEvent } from '../api'
 import LeadCard from './LeadCard'
 
 interface Props {
@@ -55,7 +55,7 @@ export default function LeadList({ advisor, onLogout }: Props) {
     }
   }, [advisor])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { trackEvent(advisor, 'page_load'); load() }, [load])
 
   function handleDiscard(id: string) {
     setLeads((prev) => prev.filter((l) => l.id !== id))
@@ -86,7 +86,7 @@ export default function LeadList({ advisor, onLogout }: Props) {
             )}
             <button
               className="btn btn-refresh"
-              onClick={() => load(true)}
+              onClick={() => { trackEvent(advisor, 'refresh'); load(true) }}
               disabled={refreshing || loading}
             >
               {refreshing ? 'Refreshing…' : '↻ Refresh'}

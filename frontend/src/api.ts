@@ -40,6 +40,15 @@ export async function fetchInvestorStatus(
   return data.status as string
 }
 
+/** Fire-and-forget analytics event. Never throws — never blocks the UI. */
+export function trackEvent(advisor: string, eventType: string): void {
+  fetch('/api/analytics', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ advisor_name: advisor, event_type: eventType }),
+  }).catch(() => {})
+}
+
 export async function fetchNextMeeting(
   advisor: string,
   contactEmail: string,

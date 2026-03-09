@@ -7,18 +7,18 @@ from typing import Optional
 import asyncpg
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from config import settings
-from database import init_db, upsert_discard, get_active_discards, save_google_token, get_google_token
+from database import init_db, upsert_discard, get_active_discards, save_google_token, get_google_token, log_event, get_report
 from hubspot_client import fetch_contacts_for_advisor, get_advisor_names
 from hubspot_engagement_service import get_contact_notes, get_contact_emails
 from ranking import rank_contacts
 from aircall_service import get_investor_transcripts
 from claude_service import generate_investor_status
 from google_calendar_service import get_next_meeting
-from models import DiscardRequest, LeadResponse, AdvisorsResponse, InvestorStatusResponse
+from models import DiscardRequest, LeadResponse, AdvisorsResponse, InvestorStatusResponse, AnalyticsEvent
 
 
 @asynccontextmanager
@@ -335,6 +335,99 @@ async def calendar_next_meeting(
             "summary": result["summary"],
         },
     }
+
+
+# ─── Analytics ───────────────────────────────────────────────────────────────
+
+@app.post("/api/analytics", status_code=204)
+async def track(request: Request, event: AnalyticsEvent):
+    """Fire-and-forget event logger. Never raises to the client."""
+    try:
+        await log_event(request.app.state.db, event.advisor_name, event.event_type)
+    except Exception:
+        pass  # never block the UI
+
+
+@app.get("/report", response_class=HTMLResponse)
+async def report_page(request: Request, days: int = 7):
+    """Bookmarkable admin report: daily usage by advisor."""
+    rows = await get_report(request.app.state.db, days)
+
+    if rows:
+        row_html = "\n".join(
+            f"<tr>"
+            f"<td>{r['day']}</td>"
+            f"<td>{r['advisor_name']}</td>"
+            f"<td class='num'>{r['page_loads']}</td>"
+            f"<td class='num'>{r['refreshes']}</td>"
+            f"<td class='num'>{r['clicks']}</td>"
+            f"</tr>"
+            for r in rows
+        )
+    else:
+        row_html = "<tr><td colspan='5' class='empty'>No events recorded yet.</td></tr>"
+
+    active7  = 'class="active"' if days == 7  else ''
+    active30 = 'class="active"' if days == 30 else ''
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Usage Report</title>
+  <style>
+    *, *::before, *::after {{ box-sizing: border-box; }}
+    body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #f5f5f5; color: #111827; padding: 40px 32px; margin: 0; }}
+    h1   {{ font-size: 22px; font-weight: 700; margin: 0 0 4px; }}
+    .sub {{ color: #6b7280; font-size: 13px; margin: 0 0 24px; }}
+    .toggle {{ margin-bottom: 20px; display: flex; gap: 8px; }}
+    .toggle a {{ padding: 6px 16px; border-radius: 6px; background: #e5e7eb;
+                 color: #374151; text-decoration: none; font-size: 13px;
+                 font-weight: 500; transition: background .15s; }}
+    .toggle a:hover {{ background: #d1d5db; }}
+    .toggle a.active {{ background: #495DE5; color: #fff; }}
+    table  {{ width: 100%; border-collapse: collapse; background: #fff;
+              border-radius: 10px; overflow: hidden;
+              box-shadow: 0 1px 4px rgba(0,0,0,.08); }}
+    th     {{ padding: 11px 16px; text-align: left; font-size: 11px;
+              text-transform: uppercase; letter-spacing: .06em;
+              color: #9ca3af; background: #fafafa;
+              border-bottom: 1px solid #e5e7eb; }}
+    th.num {{ text-align: right; }}
+    td     {{ padding: 12px 16px; font-size: 14px;
+              border-bottom: 1px solid #f3f4f6; }}
+    tr:last-child td {{ border-bottom: none; }}
+    tr:hover td {{ background: #fafafa; }}
+    .num   {{ text-align: right; font-variant-numeric: tabular-nums; }}
+    .empty {{ text-align: center; color: #9ca3af; padding: 48px !important; }}
+  </style>
+</head>
+<body>
+  <h1>Usage Report</h1>
+  <p class="sub">Advisor activity — last {days} days (ET)</p>
+  <div class="toggle">
+    <a href="/report?days=7"  {active7}>Last 7 days</a>
+    <a href="/report?days=30" {active30}>Last 30 days</a>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Advisor</th>
+        <th class="num">Page Loads</th>
+        <th class="num">Refreshes</th>
+        <th class="num">Clicks</th>
+      </tr>
+    </thead>
+    <tbody>
+      {row_html}
+    </tbody>
+  </table>
+</body>
+</html>"""
+    return HTMLResponse(content=html)
 
 
 # ─── Serve React SPA (must come LAST — catches all unmatched routes) ──────────
