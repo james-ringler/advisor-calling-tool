@@ -77,22 +77,12 @@ def _has_qualifying_call(contact: dict, qualified_phones: Optional[set]) -> bool
     return norm_phone(phone) in qualified_phones
 
 
-_EXCLUDED_STATUSES = {
-    "order completed",
-    "order complete",
-    "declined a meeting",
-    "reached - not interested",
-    "have not reached yet",
-    "no show",
-}
-
-
 def _is_closed(contact: dict) -> bool:
-    """Return True if contact should be excluded based on outcome/adviser status."""
+    """Return True if the contact has already been closed (Order Completed)."""
     props = contact.get("properties", {})
     for field in ("mmfc_outcome", "existing_adviser_status"):
-        val = (props.get(field) or "").lower().strip()
-        if val in _EXCLUDED_STATUSES:
+        val = props.get(field) or ""
+        if "order completed" in val.lower():
             return True
     return False
 
