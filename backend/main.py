@@ -62,6 +62,16 @@ def _format_date(ms_value: Optional[str]) -> Optional[str]:
         return None
 
 
+def _is_closed(contact: dict) -> bool:
+    """Return True if the contact has already been closed (Order Completed)."""
+    props = contact.get("properties", {})
+    for field in ("mmfc_outcome", "existing_adviser_status"):
+        val = props.get(field) or ""
+        if "order completed" in val.lower():
+            return True
+    return False
+
+
 def _has_scheduled_followup(contact: dict) -> bool:
     """Return True if a future HubSpot activity is already scheduled for this contact."""
     next_date = contact.get("properties", {}).get("notes_next_activity_date")
@@ -148,6 +158,7 @@ async def leads(request: Request, advisor: str = Query(..., description="Advisor
     contacts = await fetch_contacts_for_advisor(advisor)
     discarded = await get_active_discards(pool, advisor)
     contacts = [c for c in contacts if c["id"] not in discarded]
+    contacts = [c for c in contacts if not _is_closed(c)]
     contacts = [c for c in contacts if not _has_scheduled_followup(c)]
 
     ranked = rank_contacts(contacts)
