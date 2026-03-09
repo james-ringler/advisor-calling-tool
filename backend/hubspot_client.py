@@ -8,6 +8,7 @@ PROPERTIES = [
     "firstname",
     "lastname",
     "email",
+    "phone",
     "be_launch_lists___lead_owner",
     "total_investment_portfolio",
     "admin_time_last_seen",

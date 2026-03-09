@@ -15,7 +15,7 @@ from database import init_db, upsert_discard, get_active_discards, save_google_t
 from hubspot_client import fetch_contacts_for_advisor, get_advisor_names
 from hubspot_engagement_service import get_contact_notes, get_contact_emails
 from ranking import rank_contacts
-from aircall_service import get_investor_transcripts
+from aircall_service import get_investor_transcripts, get_qualified_contact_phones, norm_phone
 from claude_service import generate_investor_status
 from google_calendar_service import get_next_meeting
 from models import DiscardRequest, LeadResponse, AdvisorsResponse, InvestorStatusResponse
@@ -60,6 +60,21 @@ def _format_date(ms_value: Optional[str]) -> Optional[str]:
         return dt.strftime("%Y-%m-%d")
     except (TypeError, ValueError):
         return None
+
+
+def _has_qualifying_call(contact: dict, qualified_phones: Optional[set]) -> bool:
+    """Return True if contact had a 4+ min Aircall conversation with the advisor.
+
+    Falls back to aircall_last_call_at presence when Aircall lookup failed (None).
+    """
+    props = contact.get("properties", {})
+    if qualified_phones is None:
+        # Aircall API unreachable — degrade gracefully: require any Aircall call
+        return bool(props.get("aircall_last_call_at"))
+    phone = (props.get("phone") or "").strip()
+    if not phone:
+        return False
+    return norm_phone(phone) in qualified_phones
 
 
 def _is_closed(contact: dict) -> bool:
@@ -155,11 +170,15 @@ async def leads(request: Request, advisor: str = Query(..., description="Advisor
         raise HTTPException(status_code=400, detail=f"Unknown advisor: {advisor}")
 
     pool = request.app.state.db
-    contacts = await fetch_contacts_for_advisor(advisor)
+    contacts, qualified_phones = await asyncio.gather(
+        fetch_contacts_for_advisor(advisor),
+        get_qualified_contact_phones(advisor),
+    )
     discarded = await get_active_discards(pool, advisor)
     contacts = [c for c in contacts if c["id"] not in discarded]
     contacts = [c for c in contacts if not _is_closed(c)]
     contacts = [c for c in contacts if not _has_scheduled_followup(c)]
+    contacts = [c for c in contacts if _has_qualifying_call(c, qualified_phones)]
 
     ranked = rank_contacts(contacts)
     return [_build_lead(c, c["rank"]) for c in ranked[:35]]
