@@ -1,5 +1,6 @@
 import asyncio
 import os
+import re
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone, timedelta
 from typing import Optional
@@ -96,11 +97,17 @@ _NOTE_POSITIVE = {
     "like the concept", "love the concept", "great opportunity",
 }
 
+# Catches "not interested", "not really interested", "not very interested",
+# "not that interested", "not at all interested", etc.
+_NOT_INTERESTED_RE = re.compile(r'\bnot\b\s+(?:\w+\s+){0,2}interested\b', re.IGNORECASE)
+
 
 def _note_sentiment_delta(text: str) -> float:
     """Return -15 (disinterest), +10 (interest), or 0 (neutral) based on note keywords."""
     t = text.lower()
     if any(kw in t for kw in _NOTE_NEGATIVE):
+        return -15.0
+    if _NOT_INTERESTED_RE.search(t):
         return -15.0
     if any(kw in t for kw in _NOTE_POSITIVE):
         return +10.0
