@@ -140,6 +140,17 @@ export default function LeadCard({ lead, advisor, onDiscard }: Props) {
           </div>
         </div>
 
+        {lead.recent_note && (
+          <div className="lead-note">
+            <span className="note-meta">📝 Note — {lead.recent_note_date ?? ''}</span>
+            <p className="note-text">
+              {lead.recent_note.length > 220
+                ? lead.recent_note.slice(0, 220) + '…'
+                : lead.recent_note}
+            </p>
+          </div>
+        )}
+
         {lead.email && <MeetingCountdown contactEmail={lead.email} advisor={advisor} />}
 
         <InvestorStatus contactId={lead.id} investorName={lead.full_name} />

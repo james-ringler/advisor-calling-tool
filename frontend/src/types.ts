@@ -17,6 +17,8 @@ export interface Lead {
   hubspot_url: string
   last_call_date: string | null
   last_website_visit: string | null
+  recent_note: string | null
+  recent_note_date: string | null
 }
 
 export type DiscardDuration = 'today' | '30days' | 'forever'

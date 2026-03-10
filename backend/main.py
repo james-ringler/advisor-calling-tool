@@ -13,8 +13,8 @@ from fastapi.staticfiles import StaticFiles
 from config import settings
 from database import init_db, upsert_discard, get_active_discards, save_google_token, get_google_token, log_event, get_report
 from hubspot_client import fetch_contacts_for_advisor, get_advisor_names
-from hubspot_engagement_service import get_contact_notes, get_contact_emails
-from ranking import rank_contacts
+from hubspot_engagement_service import get_contact_notes, get_contact_emails, get_recent_note
+from ranking import rank_contacts, sort_key
 from aircall_service import get_investor_transcripts
 from claude_service import generate_investor_status
 from google_calendar_service import get_next_meeting
@@ -81,6 +81,32 @@ def _had_4min_call(contact: dict) -> bool:
     return False
 
 
+# ─── Note sentiment ──────────────────────────────────────────────────────────
+
+_NOTE_NEGATIVE = {
+    "not interested", "not looking", "doesn't want", "don't want",
+    "no longer interested", "pass", "happy with current", "not allocating",
+    "not going to invest", "no interest", "do not call", "dnc", "declined",
+    "no thanks", "not ready", "won't be investing", "too risky", "not for me",
+}
+_NOTE_POSITIVE = {
+    "interested", "excited", "looking to", "wants to", "would like",
+    "moving forward", "ready to", "schedule a call", "considering",
+    "open to it", "more allocation", "wants more", "asked about",
+    "like the concept", "love the concept", "great opportunity",
+}
+
+
+def _note_sentiment_delta(text: str) -> float:
+    """Return -15 (disinterest), +10 (interest), or 0 (neutral) based on note keywords."""
+    t = text.lower()
+    if any(kw in t for kw in _NOTE_NEGATIVE):
+        return -15.0
+    if any(kw in t for kw in _NOTE_POSITIVE):
+        return +10.0
+    return 0.0
+
+
 _CLOSED_ADVISER_ONLY = {"not interested to invest more", "no show"}
 
 
@@ -140,6 +166,8 @@ def _build_lead(contact: dict, rank: int) -> LeadResponse:
         ),
         last_call_date=_format_date(props.get("aircall_last_call_at")),
         last_website_visit=_format_date(props.get("last_seen_timestamp")),
+        recent_note=contact.get("recent_note"),
+        recent_note_date=contact.get("recent_note_date"),
     )
 
 
@@ -188,7 +216,34 @@ async def leads(request: Request, advisor: str = Query(..., description="Advisor
     contacts = [c for c in contacts if _had_4min_call(c)]
 
     ranked = rank_contacts(contacts)
-    return [_build_lead(c, c["rank"]) for c in ranked[:35]]
+
+    # ── Phase 2: enrich top 50 with most recent note ──────────────────────────
+    candidates = ranked[:50]
+    sem = asyncio.Semaphore(10)
+
+    async def _fetch_note(cid: str):
+        async with sem:
+            return await get_recent_note(cid)
+
+    note_results = await asyncio.gather(
+        *[_fetch_note(c["id"]) for c in candidates],
+        return_exceptions=True,
+    )
+    for contact, note in zip(candidates, note_results):
+        if isinstance(note, dict):
+            contact["recent_note"]      = note["text"]
+            contact["recent_note_date"] = note["date"]
+            delta = _note_sentiment_delta(note["text"])
+            contact["score"] = round(max(0.0, min(100.0, contact["score"] + delta)), 2)
+        else:
+            contact["recent_note"] = contact["recent_note_date"] = None
+
+    candidates.sort(key=sort_key)
+    for i, c in enumerate(candidates):
+        c["rank"] = i + 1
+    # ──────────────────────────────────────────────────────────────────────────
+
+    return [_build_lead(c, c["rank"]) for c in candidates[:35]]
 
 
 @app.post("/api/discard")

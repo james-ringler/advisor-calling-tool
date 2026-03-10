@@ -27,6 +27,8 @@ class LeadResponse(BaseModel):
     hubspot_url: str
     last_call_date: Optional[str] = None
     last_website_visit: Optional[str] = None
+    recent_note: Optional[str] = None
+    recent_note_date: Optional[str] = None
 
 
 class AnalyticsEvent(BaseModel):

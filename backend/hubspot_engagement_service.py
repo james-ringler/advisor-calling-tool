@@ -64,6 +64,35 @@ async def get_contact_notes(contact_id: str, limit: int = 5) -> list[str]:
         return results
 
 
+async def get_recent_note(contact_id: str) -> dict | None:
+    """Return the single most recent note as {date, text}, or None if no notes exist."""
+    async with httpx.AsyncClient(base_url=BASE_URL, headers=_headers(), timeout=15) as client:
+        body: dict[str, Any] = {
+            "filterGroups": [{
+                "filters": [{
+                    "propertyName": "associations.contact",
+                    "operator": "EQ",
+                    "value": contact_id,
+                }]
+            }],
+            "properties": ["hs_note_body", "hs_timestamp"],
+            "sorts": [{"propertyName": "hs_timestamp", "direction": "DESCENDING"}],
+            "limit": 1,
+        }
+        try:
+            response = await client.post("/crm/v3/objects/notes/search", json=body)
+            response.raise_for_status()
+        except Exception:
+            return None
+        results = response.json().get("results", [])
+        if not results:
+            return None
+        props = results[0].get("properties", {})
+        text = _strip_html(props.get("hs_note_body") or "")
+        date = _date(props.get("hs_timestamp", ""))
+        return {"date": date, "text": text} if text else None
+
+
 async def get_contact_emails(contact_id: str, limit: int = 5) -> list[str]:
     """Return the most recent HubSpot emails for a contact as formatted strings."""
     async with httpx.AsyncClient(base_url=BASE_URL, headers=_headers(), timeout=30) as client:
