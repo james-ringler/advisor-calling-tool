@@ -36,6 +36,7 @@ ADVISOR_NAMES = [
     "Erik Bringsjord",
     "Candy Light",
     "Kevin Cox",
+    "Connor Leavell",
 ]
 
 
