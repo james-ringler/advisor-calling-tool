@@ -20,8 +20,7 @@ class LeadResponse(BaseModel):
     admin_time_last_seen: Optional[str] = None
     investor_tier: Optional[str] = None
     performance_status: Optional[str] = None
-    mmfc_outcome: Optional[str] = None
-    existing_adviser_status: Optional[str] = None
+    mmfc_existing_owner: Optional[str] = None
     total_amount_purchased: Optional[float] = None
     total_investment_portfolio: Optional[float] = None
     hubspot_url: str
