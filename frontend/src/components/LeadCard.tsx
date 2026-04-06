@@ -122,9 +122,13 @@ export default function LeadCard({ lead, advisor, onDiscard }: Props) {
             <span className="field-label">Performance</span>
             <span className="field-value">{lead.performance_status ?? '—'}</span>
           </div>
+          <div className="lead-field">
+            <span className="field-label">MMFC Outcome</span>
+            <span className="field-value">{lead.mmfc_outcome ?? '—'}</span>
+          </div>
           <div className="lead-field lead-field--wide">
-            <span className="field-label">MMFC/Existing Owner</span>
-            <span className="field-value">{lead.mmfc_existing_owner ?? '—'}</span>
+            <span className="field-label">Existing Adviser Status</span>
+            <span className="field-value">{lead.existing_adviser_status ?? '—'}</span>
           </div>
           <div className="lead-field">
             <span className="field-label">Last Called</span>

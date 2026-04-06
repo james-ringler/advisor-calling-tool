@@ -10,7 +10,8 @@ export interface Lead {
   admin_time_last_seen: string | null
   investor_tier: string | null
   performance_status: string | null
-  mmfc_existing_owner: string | null
+  mmfc_outcome: string | null
+  existing_adviser_status: string | null
   total_amount_purchased: number | null
   total_investment_portfolio: number | null
   hubspot_url: string

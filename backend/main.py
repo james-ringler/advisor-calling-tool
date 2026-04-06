@@ -163,7 +163,8 @@ def _build_lead(contact: dict, rank: int) -> LeadResponse:
         admin_time_last_seen=_format_date(props.get("admin_time_last_seen")),
         investor_tier=props.get("investor_tier"),
         performance_status=props.get("performance_status"),
-        mmfc_existing_owner=props.get("be_launch_lists___lead_owner"),
+        mmfc_outcome=props.get("mmfc_outcome"),
+        existing_adviser_status=props.get("existing_adviser_status"),
         total_amount_purchased=float(purchased_raw) if purchased_raw else None,
         total_investment_portfolio=float(portfolio_raw) if portfolio_raw else None,
         hubspot_url=HUBSPOT_CONTACT_URL.format(
