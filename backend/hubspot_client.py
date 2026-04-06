@@ -26,17 +26,12 @@ PROPERTIES = [
 ]
 
 ADVISOR_NAMES = [
-    "Michael Strang",
     "Evan McMann",
-    "Brendan Miles",
-    "Anthony DeSimone",
-    "Jake Maggy",
-    "Alec McKenna",
-    "Mike DelPozzo",
-    "Erik Bringsjord",
-    "Candy Light",
-    "Kevin Cox",
     "Connor Leavell",
+    "Kevin Cox",
+    "Mike DelPozzo",
+    "Michael Strang",
+    "Candy Light",
 ]
 
 
